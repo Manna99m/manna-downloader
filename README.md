@@ -1,43 +1,44 @@
 # Manna Downloader
 
-A responsive video/audio downloader web app built with FastAPI and yt-dlp.
+Render-ready FastAPI video/audio downloader for content you are authorized to download or where the platform/rightsholder permits downloading. It does not bypass DRM, paywalls, authentication, or access controls.
 
-## Local Windows test
+## Render deployment
 
-1. Install Python 3.10+.
-2. Double-click `run.bat`.
-3. Open `http://127.0.0.1:8000`.
-4. Paste a supported URL and click Analyze.
+This project uses Docker. Render should detect `Dockerfile` automatically. The app listens on `0.0.0.0` and uses Render's `PORT` environment variable.
 
-## Deploy to Render
+The container also starts the BgUtils YouTube PO Token HTTP provider locally. yt-dlp is configured to use the `mweb` YouTube client and the local provider.
 
-This project includes a Dockerfile and `render.yaml`.
+## Temporary diagnostic endpoint (Render Free)
 
-1. Create a GitHub repository.
-2. Upload all project files to the repository.
-3. In Render, create a new Web Service from that GitHub repository.
-4. Render should detect the Dockerfile automatically.
-5. Choose the Free plan.
-6. Deploy.
-7. Your service receives an `onrender.com` URL.
-8. Share that URL with Android/iOS users.
+Render Free web services do not provide Dashboard Shell/SSH access, so this version includes a temporary, protected diagnostic endpoint.
 
-The container includes FFmpeg and Node.js because yt-dlp may need FFmpeg for merging separate video/audio streams and a JavaScript runtime for some extractors.
+1. In Render, open **Manna Downloader → Environment**.
+2. Add an environment variable:
+   - Key: `DIAGNOSTIC_KEY`
+   - Value: choose a long random value, for example 32+ random characters.
+3. Save/redeploy.
+4. Send a POST request to `/api/diagnostic` with JSON such as:
 
-## Important
+```json
+{"url":"https://www.youtube.com/watch?v=VIDEO_ID"}
+```
 
-Render's free web services can spin down after inactivity, so the first request after idle time can be slower.
+and an HTTP header:
 
-The app uses temporary server-side files and schedules them for deletion after the response. For a larger public service, add authentication, stronger rate limiting, download quotas, queueing, storage limits, and abuse controls.
+```text
+Authorization: Bearer YOUR_DIAGNOSTIC_KEY
+```
 
-Only download content you are authorized to download or content whose platform/rightsholder permits downloading. This project does not attempt to bypass DRM, paywalls, authentication, or other access controls.
+The endpoint runs verbose yt-dlp **on the Render server itself** and returns a sanitized/truncated diagnostic log. This is useful for debugging YouTube extraction without Shell access.
 
+After troubleshooting, remove `DIAGNOSTIC_KEY` from Render and redeploy. The endpoint then returns 404.
 
-## YouTube extraction
+## Local Windows run
 
-This build includes the current BgUtils yt-dlp PO Token provider. It generates PO Tokens automatically for YouTube extraction and does not require personal YouTube cookies in the repository. YouTube can change its anti-bot requirements at any time, so a PO Token provider cannot guarantee that every video or request will always work.
+Run `run.bat`, then open `http://127.0.0.1:8000`.
 
+## Notes
 
-## YouTube PO Token provider
-
-The Render container runs the BgUtils PO Token HTTP provider locally on port 4416 and configures yt-dlp to use the mweb client with that provider. No personal YouTube cookies are stored in the repository. YouTube may still change anti-bot requirements, so successful extraction cannot be guaranteed for every video.
+- Render Free web services have an ephemeral filesystem; temporary downloaded files are not permanent.
+- Free services can spin down after inactivity and take time to wake up.
+- Keep downloads temporary and use the service only for content you are authorized to download.

@@ -1,12 +1,15 @@
 
 import asyncio
+import os
 import re
+import subprocess
+import sys
 import uuid
 from pathlib import Path
 from urllib.parse import urlparse
 
 import yt_dlp
-from fastapi import BackgroundTasks, FastAPI, HTTPException
+from fastapi import BackgroundTasks, FastAPI, Header, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, HttpUrl
@@ -79,6 +82,63 @@ async def home():
 @app.get("/health")
 async def health():
     return {"status": "ok", "service": "Manna Downloader"}
+
+
+@app.post("/api/diagnostic")
+async def diagnostic(request: VideoRequest, authorization: str | None = Header(default=None)):
+    """Run a server-side verbose yt-dlp extraction for debugging.
+
+    This endpoint is disabled unless DIAGNOSTIC_KEY is configured in the
+    Render environment. It returns the last part of yt-dlp's sanitized
+    verbose output so deployment problems can be diagnosed without shell
+    access on Render Free.
+    """
+    diagnostic_key = os.getenv("DIAGNOSTIC_KEY")
+    if not diagnostic_key:
+        raise HTTPException(status_code=404, detail="Diagnostic endpoint is disabled.")
+
+    expected = f"Bearer {diagnostic_key}"
+    if authorization != expected:
+        raise HTTPException(status_code=401, detail="Unauthorized.")
+
+    url = validate_url(str(request.url))
+    opts = [
+        sys.executable, "-m", "yt_dlp",
+        "-v", "--skip-download", "--no-playlist",
+        "--extractor-args", "youtube:player_client=mweb",
+        url,
+    ]
+
+    try:
+        proc = await asyncio.to_thread(
+            subprocess.run,
+            opts,
+            capture_output=True,
+            text=True,
+            timeout=90,
+            env={**os.environ, "PYTHONUNBUFFERED": "1"},
+        )
+        combined = (proc.stdout or "") + "\n" + (proc.stderr or "")
+    except subprocess.TimeoutExpired as exc:
+        combined = ((exc.stdout or "") if isinstance(exc.stdout, str) else "") + "\nDIAGNOSTIC TIMEOUT after 90 seconds"
+        proc = None
+
+    # Avoid returning cookies, authorization headers, or environment values.
+    sanitized_lines = []
+    for line in combined.splitlines():
+        lowered = line.lower()
+        if any(secret in lowered for secret in ("cookie:", "authorization:", "proxy-password", "password=")):
+            sanitized_lines.append("[redacted sensitive line]")
+        else:
+            sanitized_lines.append(line)
+
+    output = "\n".join(sanitized_lines)
+    return {
+        "ok": bool(proc and proc.returncode == 0),
+        "returncode": proc.returncode if proc else 124,
+        "output_tail": output[-12000:],
+        "note": "Diagnostic output is intentionally truncated and sanitized. Disable DIAGNOSTIC_KEY after troubleshooting.",
+    }
 
 
 @app.post("/api/info")
