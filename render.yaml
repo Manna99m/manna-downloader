@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: manna-downloader
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
