@@ -22,7 +22,8 @@ app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 # BgUtils automatically generates YouTube Proof-of-Origin tokens for yt-dlp.
 # This is used only for YouTube extraction and does not store personal account cookies.
 YOUTUBE_EXTRACTOR_ARGS = {
-    "youtube": "player_client=mweb;youtubepot-bgutilscript:server_home=/root/bgutil-ytdlp-pot-provider/server",
+    "youtube": {"player_client": ["mweb"]},
+    "youtubepot-bgutilhttp": {"base_url": ["http://127.0.0.1:4416"]},
 }
 
 YTDLP_COMMON_OPTS = {

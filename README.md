@@ -36,3 +36,8 @@ Only download content you are authorized to download or content whose platform/r
 ## YouTube extraction
 
 This build includes the current BgUtils yt-dlp PO Token provider. It generates PO Tokens automatically for YouTube extraction and does not require personal YouTube cookies in the repository. YouTube can change its anti-bot requirements at any time, so a PO Token provider cannot guarantee that every video or request will always work.
+
+
+## YouTube PO Token provider
+
+The Render container runs the BgUtils PO Token HTTP provider locally on port 4416 and configures yt-dlp to use the mweb client with that provider. No personal YouTube cookies are stored in the repository. YouTube may still change anti-bot requirements, so successful extraction cannot be guaranteed for every video.

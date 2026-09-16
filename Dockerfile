@@ -14,14 +14,14 @@ COPY requirements.txt .
 RUN python3 -m pip install --break-system-packages --upgrade pip \
     && python3 -m pip install --break-system-packages -r requirements.txt
 
-# Build the BgUtils PO Token provider used by yt-dlp for YouTube requests.
+# Build the BgUtils PO Token HTTP provider. yt-dlp talks to it locally.
 RUN git clone --depth 1 --branch 2.0.0 https://github.com/Brainicism/bgutil-ytdlp-pot-provider.git /root/bgutil-ytdlp-pot-provider \
     && cd /root/bgutil-ytdlp-pot-provider/server \
     && npm ci \
     && npx tsc
 
 COPY . .
-
 RUN mkdir -p /app/downloads
 
-CMD ["sh", "-c", "uvicorn app:app --host 0.0.0.0 --port ${PORT:-10000}"]
+# Start the local PO Token provider first, then the FastAPI app.
+CMD ["sh", "-c", "node /root/bgutil-ytdlp-pot-provider/server/build/main.js --host 127.0.0.1 --port 4416 & sleep 2; exec uvicorn app:app --host 0.0.0.0 --port ${PORT:-10000}"]
