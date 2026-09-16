@@ -19,6 +19,18 @@ app = FastAPI(title="Manna Downloader")
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 
 
+# BgUtils automatically generates YouTube Proof-of-Origin tokens for yt-dlp.
+# This is used only for YouTube extraction and does not store personal account cookies.
+YOUTUBE_EXTRACTOR_ARGS = {
+    "youtube": "player_client=mweb;youtubepot-bgutilscript:server_home=/root/bgutil-ytdlp-pot-provider/server",
+}
+
+YTDLP_COMMON_OPTS = {
+    "noplaylist": True,
+    "extractor_args": YOUTUBE_EXTRACTOR_ARGS,
+}
+
+
 class VideoRequest(BaseModel):
     url: HttpUrl
     format_id: str = "best"
@@ -39,10 +51,10 @@ def clean_name(name: str) -> str:
 
 def extract_info(url: str):
     opts = {
+        **YTDLP_COMMON_OPTS,
         "quiet": True,
         "no_warnings": True,
         "skip_download": True,
-        "noplaylist": True,
     }
     try:
         with yt_dlp.YoutubeDL(opts) as ydl:
@@ -130,9 +142,9 @@ async def download(request: VideoRequest, background_tasks: BackgroundTasks):
     if request.media_type == "audio":
         output_template = str(DOWNLOAD_DIR / f"{job_id}_{title}.%(ext)s")
         opts = {
+            **YTDLP_COMMON_OPTS,
             "format": "ba/b",
             "outtmpl": output_template,
-            "noplaylist": True,
             "quiet": True,
             "no_warnings": True,
             "postprocessors": [{
@@ -152,9 +164,9 @@ async def download(request: VideoRequest, background_tasks: BackgroundTasks):
             selector = f"{requested}+ba/{requested}/b"
 
         opts = {
+            **YTDLP_COMMON_OPTS,
             "format": selector,
             "outtmpl": output_template,
-            "noplaylist": True,
             "quiet": True,
             "no_warnings": True,
             "merge_output_format": "mp4",

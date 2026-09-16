@@ -31,3 +31,8 @@ Render's free web services can spin down after inactivity, so the first request 
 The app uses temporary server-side files and schedules them for deletion after the response. For a larger public service, add authentication, stronger rate limiting, download quotas, queueing, storage limits, and abuse controls.
 
 Only download content you are authorized to download or content whose platform/rightsholder permits downloading. This project does not attempt to bypass DRM, paywalls, authentication, or other access controls.
+
+
+## YouTube extraction
+
+This build includes the current BgUtils yt-dlp PO Token provider. It generates PO Tokens automatically for YouTube extraction and does not require personal YouTube cookies in the repository. YouTube can change its anti-bot requirements at any time, so a PO Token provider cannot guarantee that every video or request will always work.
